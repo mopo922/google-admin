@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, FlatList } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, StyleSheet, ScrollView, FlatList, Alert } from 'react-native';
 import {
   Text,
   Card,
@@ -44,11 +44,7 @@ export default function GroupDetailsScreen({
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState('');
 
-  useEffect(() => {
-    loadGroupData();
-  }, [groupId]);
-
-  const loadGroupData = async () => {
+  const loadGroupData = useCallback(async () => {
     try {
       setIsLoading(true);
       const [groupData, membersList] = await Promise.all([
@@ -64,27 +60,41 @@ export default function GroupDetailsScreen({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [groupId, accessToken, onBack]);
+
+  useEffect(() => {
+    loadGroupData();
+  }, [loadGroupData]);
 
   const handleDeleteGroup = async () => {
     if (!group) return;
     
-    const confirmDelete = confirm(
-      `Are you sure you want to delete ${group.name}? This action cannot be undone.`
+    Alert.alert(
+      'Delete Group',
+      `Are you sure you want to delete ${group.name}? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsUpdating(true);
+              await deleteGroup(accessToken, group.id);
+              Alert.alert('Success', 'Group deleted successfully.');
+              onGroupDeleted();
+            } catch (error) {
+              console.error('Error deleting group:', error);
+              Alert.alert('Error', 'Failed to delete group.');
+              setIsUpdating(false);
+            }
+          },
+        },
+      ]
     );
-    
-    if (!confirmDelete) return;
-    
-    try {
-      setIsUpdating(true);
-      await deleteGroup(accessToken, group.id);
-      alert('Group deleted successfully.');
-      onGroupDeleted();
-    } catch (error) {
-      console.error('Error deleting group:', error);
-      alert('Failed to delete group.');
-      setIsUpdating(false);
-    }
   };
 
   const handleAddMember = async () => {
@@ -109,24 +119,34 @@ export default function GroupDetailsScreen({
   const handleRemoveMember = async (memberId: string, memberEmail: string) => {
     if (!group) return;
     
-    const confirmRemove = confirm(
-      `Remove ${memberEmail} from ${group.name}?`
+    Alert.alert(
+      'Remove Member',
+      `Remove ${memberEmail} from ${group.name}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsUpdating(true);
+              await removeGroupMember(accessToken, group.id, memberId);
+              // Reload members
+              const membersList = await listGroupMembers(accessToken, group.id);
+              setMembers(membersList);
+            } catch (error) {
+              console.error('Error removing member:', error);
+              Alert.alert('Error', 'Failed to remove member.');
+            } finally {
+              setIsUpdating(false);
+            }
+          },
+        },
+      ]
     );
-    
-    if (!confirmRemove) return;
-    
-    try {
-      setIsUpdating(true);
-      await removeGroupMember(accessToken, group.id, memberId);
-      // Reload members
-      const membersList = await listGroupMembers(accessToken, group.id);
-      setMembers(membersList);
-    } catch (error) {
-      console.error('Error removing member:', error);
-      alert('Failed to remove member.');
-    } finally {
-      setIsUpdating(false);
-    }
   };
 
   const renderMember = ({ item: member }: { item: GroupMember }) => (

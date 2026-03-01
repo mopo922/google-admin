@@ -30,7 +30,7 @@ export default function GroupsScreen({
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadGroups = async (isRefresh = false) => {
+  const loadGroups = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
         setIsRefreshing(true);
@@ -48,11 +48,11 @@ export default function GroupsScreen({
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [accessToken]);
 
   useEffect(() => {
     loadGroups();
-  }, [accessToken]);
+  }, [loadGroups]);
 
   useEffect(() => {
     if (searchQuery.trim() === '') {
@@ -71,7 +71,7 @@ export default function GroupsScreen({
 
   const onRefresh = useCallback(() => {
     loadGroups(true);
-  }, [accessToken]);
+  }, [loadGroups]);
 
   const renderGroupCard = ({ item: group }: { item: Group }) => (
     <Card style={styles.groupCard} onPress={() => onGroupPress(group)}>

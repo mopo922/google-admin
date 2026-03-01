@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import {
   Text,
   Card,
@@ -30,11 +30,7 @@ export default function UserDetailsScreen({
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  useEffect(() => {
-    loadUser();
-  }, [userId]);
-
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     try {
       setIsLoading(true);
       const userData = await getUser(accessToken, userId);
@@ -46,7 +42,11 @@ export default function UserDetailsScreen({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId, accessToken, onBack]);
+
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
 
   const handleSuspendToggle = async () => {
     if (!user) return;
@@ -66,23 +66,32 @@ export default function UserDetailsScreen({
   const handleDeleteUser = async () => {
     if (!user) return;
     
-    // Simple confirmation
-    const confirmDelete = confirm(
-      `Are you sure you want to delete ${user.name.fullName}? This action cannot be undone.`
+    Alert.alert(
+      'Delete User',
+      `Are you sure you want to delete ${user.name.fullName}? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsUpdating(true);
+              await deleteUser(accessToken, user.id);
+              Alert.alert('Success', 'User deleted successfully.');
+              onUserDeleted();
+            } catch (error) {
+              console.error('Error deleting user:', error);
+              Alert.alert('Error', 'Failed to delete user.');
+              setIsUpdating(false);
+            }
+          },
+        },
+      ]
     );
-    
-    if (!confirmDelete) return;
-    
-    try {
-      setIsUpdating(true);
-      await deleteUser(accessToken, user.id);
-      alert('User deleted successfully.');
-      onUserDeleted();
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      alert('Failed to delete user.');
-      setIsUpdating(false);
-    }
   };
 
   if (isLoading) {

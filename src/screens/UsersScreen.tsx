@@ -30,7 +30,7 @@ export default function UsersScreen({
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadUsers = async (isRefresh = false) => {
+  const loadUsers = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
         setIsRefreshing(true);
@@ -48,11 +48,11 @@ export default function UsersScreen({
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [accessToken]);
 
   useEffect(() => {
     loadUsers();
-  }, [accessToken]);
+  }, [loadUsers]);
 
   useEffect(() => {
     if (searchQuery.trim() === '') {
@@ -70,7 +70,7 @@ export default function UsersScreen({
 
   const onRefresh = useCallback(() => {
     loadUsers(true);
-  }, [accessToken]);
+  }, [loadUsers]);
 
   const renderUserCard = ({ item: user }: { item: User }) => (
     <Card style={styles.userCard} onPress={() => onUserPress(user)}>
